@@ -3,6 +3,30 @@
 
 Offical Keras (TensorFlow) implementaiton. If you have any questions or need more help with the code, feel free to contact the first author.
 
+**[Modifications Start]**
+
+For a school project I tried to convert this model to work with TensorFlow.js. It didn't work out of the box because of the custom Layer 'BilinearUpSampling2D' so i tried to replace it with 'UpSampling2D' which is supported by TF.js, then retrain the model and finally convert it to the format needed by TF.js.
+
+I used the cloud service "paperspace" with a P6000 machine for training. The steps I followed/things i learned:
+* The downloading of the dataset directly to the remote machine was a bit complicated because it was hosted on GoogleDrive. This workaround helped to download the file: https://unix.stackexchange.com/a/332277
+* To use the GPU for training the conda env had to be set up as follows ([TF build configurations](https://www.tensorflow.org/install/source#tested_build_configurations)):
+
+  ```shell
+  conda create -n densedepth pip python=3.7 cudnn cupti cudatoolkit=10.0
+
+  conda activate densedepth
+
+  pip install tensorflow-gpu==1.13.1 keras pillow matplotlib scikit-learn scikit-image opencv-python pydot
+  ```
+
+* To prevent the training process from stopping on the remote machine I used the very useful `screen` utility.
+* Now I was able to train the Model but upon saving the .h5 file to the disk an error occured: `TypeError('Not JSON Serializable...`. After the fixes explained here it finally worked: https://github.com/keras-team/keras/issues/9342#issuecomment-396056333
+* After training the model for one epoch I tried to convert it into a TensorFlow.js and tried to run it in the browser. Unfortunatly i wasn't able to run it. As it appeared there was still an issue with the custom layers implemented in keras which were not compatible with TF.js so we decided to use build our project using the RunwayML Network API.
+
+**[Modifications End]**
+
+
+
 **[Update]** Added a Colab notebook to try the method on the fly.
 
 **[Update]** Experimental TensorFlow 2.0 implementation added.
@@ -32,7 +56,7 @@ Offical Keras (TensorFlow) implementaiton. If you have any questions or need mor
 
 ## Demos
 * After downloading the pre-trained model (nyu.h5), run `python test.py`. You should see a montage of images with their estimated depth maps.
-* **[Update]** A Qt demo showing 3D point clouds from the webcam or an image. Simply run `python demo.py`. It requires the packages `PyGLM PySide2 pyopengl`. 
+* **[Update]** A Qt demo showing 3D point clouds from the webcam or an image. Simply run `python demo.py`. It requires the packages `PyGLM PySide2 pyopengl`.
 <p align="center">
   <img style="max-width:500px" src="https://s3-eu-west-1.amazonaws.com/densedepth/densedepth_results_04.jpg" alt="RGBD Demo">
 </p>
