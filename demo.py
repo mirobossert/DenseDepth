@@ -41,10 +41,10 @@ def load_model():
     # Kerasa / TensorFlow
     os.environ['TF_CPP_MIN_LOG_LEVEL'] = '5'
     from keras.models import load_model
-    from layers import BilinearUpSampling2D
+    from layers import UpSampling2D
 
     # Custom object needed for inference and training
-    custom_objects = {'BilinearUpSampling2D': BilinearUpSampling2D, 'depth_loss_function': None}
+    custom_objects = {'UpSampling2D': UpSampling2D, 'depth_loss_function': None}
 
     # Load model into GPU / CPU
     return load_model(args.model, custom_objects=custom_objects, compile=False)
@@ -58,7 +58,7 @@ def toc(): print('{0} seconds.'.format(time.time() - ticTime))
 def np_to_qimage(a):
     im = a.copy()
     return QtGui.QImage(im.data, im.shape[1], im.shape[0], im.strides[0], QtGui.QImage.Format_RGB888).copy()
-    
+
 def qimage_to_np(img):
     img = img.convertToFormat(QtGui.QImage.Format.Format_ARGB32)
     return np.array(img.constBits()).reshape(img.height(), img.width(), 4)
@@ -82,14 +82,14 @@ class Window(QtWidgets.QWidget):
         mainLayout = QtWidgets.QVBoxLayout()
 
         # Input / output views
-        viewsLayout = QtWidgets.QGridLayout()        
+        viewsLayout = QtWidgets.QGridLayout()
         self.inputViewer = QtWidgets.QLabel("[Click to start]")
         self.inputViewer.setPixmap(QtGui.QPixmap(rgb_width,rgb_height))
         self.outputViewer = QtWidgets.QLabel("[Click to start]")
         self.outputViewer.setPixmap(QtGui.QPixmap(rgb_width//2,rgb_height//2))
 
-        imgsFrame = QtWidgets.QFrame()        
-        inputsLayout = QtWidgets.QVBoxLayout()  
+        imgsFrame = QtWidgets.QFrame()
+        inputsLayout = QtWidgets.QVBoxLayout()
         imgsFrame.setLayout(inputsLayout)
         inputsLayout.addWidget(self.inputViewer)
         inputsLayout.addWidget(self.outputViewer)
@@ -99,8 +99,8 @@ class Window(QtWidgets.QWidget):
         viewsLayout.setColumnStretch(1, 10)
         mainLayout.addLayout(viewsLayout)
 
-        # Load depth estimation model      
-        toolsLayout = QtWidgets.QHBoxLayout()  
+        # Load depth estimation model
+        toolsLayout = QtWidgets.QHBoxLayout()
 
         self.button = QtWidgets.QPushButton("Load model...")
         self.button.clicked.connect(self.loadModel)
@@ -126,7 +126,7 @@ class Window(QtWidgets.QWidget):
         self.button6.clicked.connect(self.updateCloud)
         toolsLayout.addWidget(self.button6)
 
-        mainLayout.addLayout(toolsLayout)        
+        mainLayout.addLayout(toolsLayout)
 
         self.setLayout(mainLayout)
         self.setWindowTitle(self.tr("RGBD Viewer"))
@@ -139,17 +139,17 @@ class Window(QtWidgets.QWidget):
         self.inputViewer.setPixmap(QtGui.QPixmap.fromImage(np_to_qimage(img)))
         coloredDepth = (plasma(self.glWidget.depth[:,:,0])[:,:,:3] * 255).astype('uint8')
         self.outputViewer.setPixmap(QtGui.QPixmap.fromImage(np_to_qimage(coloredDepth)))
-        
-    def loadModel(self):        
+
+    def loadModel(self):
         QtGui.QGuiApplication.setOverrideCursor(QtCore.Qt.WaitCursor)
-        tic()  
+        tic()
         self.model = load_model()
         print('Model loaded.')
         toc()
         self.updateCloud()
         QtGui.QGuiApplication.restoreOverrideCursor()
 
-    def loadCamera(self):        
+    def loadCamera(self):
         self.capture = cv2.VideoCapture(0)
         self.updateInput.emit()
 
@@ -197,7 +197,7 @@ class Window(QtWidgets.QWidget):
         rgb8 = qimage_to_np(self.inputViewer.pixmap().toImage())
         self.glWidget.rgb = resize((rgb8[:,:,:3]/255)[:,:,::-1], (rgb_height, rgb_width), order=1, anti_aliasing=True)
 
-        if self.model: 
+        if self.model:
             with graph.as_default():
                 depth = (1000 / self.model.predict( np.expand_dims(self.glWidget.rgb, axis=0)  )) / 1000
             coloredDepth = (plasma(depth[0,:,:,0])[:,:,:3] * 255).astype('uint8')
@@ -205,7 +205,7 @@ class Window(QtWidgets.QWidget):
             self.glWidget.depth = depth[0,:,:,0]
         else:
             self.glWidget.depth = 0.5 + np.zeros((rgb_height//2, rgb_width//2, 1))
-            
+
         self.glWidget.updateRGBD()
         self.glWidget.updateGL()
 
@@ -227,7 +227,7 @@ class GLWidget(QtOpenGL.QGLWidget):
         self.trolltechGreen = QtGui.QColor.fromCmykF(0.40, 0.0, 1.0, 0.0)
         self.trolltechPurple = QtGui.QColor.fromCmykF(0.39, 0.39, 0.0, 0.0)
 
-        # Precompute for world coordinates 
+        # Precompute for world coordinates
         self.xx, self.yy = self.worldCoords(width=rgb_width//2, height=rgb_height//2)
 
         # Load test frame from disk
@@ -271,7 +271,7 @@ class GLWidget(QtOpenGL.QGLWidget):
             self.updateGL()
 
     def resizeGL(self, width, height):
-        GL.glViewport(0, 0, width, height)            
+        GL.glViewport(0, 0, width, height)
 
     def mousePressEvent(self, event):
         self.lastPos = QtCore.QPoint(event.pos())
@@ -309,11 +309,11 @@ class GLWidget(QtOpenGL.QGLWidget):
         void main() {gl_Position = mvp * vec4(position, 1.0);frag_color = vec4(color, 1.0);}""", GL.GL_VERTEX_SHADER)
 
         FRAGMENT_SHADER = shaders.compileShader("""#version 330
-        in vec4 frag_color; out vec4 out_color; 
+        in vec4 frag_color; out vec4 out_color;
         void main() {out_color = frag_color;}""", GL.GL_FRAGMENT_SHADER)
 
         self.shaderProgram = shaders.compileProgram(VERTEX_SHADER, FRAGMENT_SHADER)
-        
+
         self.UNIFORM_LOCATIONS = {
             'position': GL.glGetAttribLocation( self.shaderProgram, 'position' ),
             'color': GL.glGetAttribLocation( self.shaderProgram, 'color' ),
@@ -341,7 +341,7 @@ class GLWidget(QtOpenGL.QGLWidget):
     def posFromDepth(self, depth):
         length = depth.shape[0] * depth.shape[1]
 
-        depth[edges(depth) > 0.3] = 1e6  # Hide depth edges       
+        depth[edges(depth) > 0.3] = 1e6  # Hide depth edges
         z = depth.reshape(length)
 
         return np.dstack((self.xx*z, self.yy*z, z)).reshape((length, 3))
@@ -372,7 +372,7 @@ class GLWidget(QtOpenGL.QGLWidget):
 
     def drawObject(self):
         # Update camera
-        model, view, proj = glm.mat4(1), glm.mat4(1), glm.perspective(45, self.width() / self.height(), 0.01, 100)        
+        model, view, proj = glm.mat4(1), glm.mat4(1), glm.perspective(45, self.width() / self.height(), 0.01, 100)
         center, up, eye = glm.vec3(0,-0.075,0), glm.vec3(0,-1,0), glm.vec3(0,0,-0.4 * (self.zoomLevel/10))
         view = glm.lookAt(eye, center, up)
         model = glm.rotate(model, self.xRot / 160.0, glm.vec3(1,0,0))

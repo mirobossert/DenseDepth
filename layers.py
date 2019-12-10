@@ -3,9 +3,9 @@ import keras.utils.conv_utils as conv_utils
 import tensorflow as tf
 import keras.backend as K
 
-class BilinearUpSampling2D(Layer):
+class UpSampling2D(Layer):
     def __init__(self, size=(2, 2), data_format=None, **kwargs):
-        super(BilinearUpSampling2D, self).__init__(**kwargs)
+        super(UpSampling2D, self).__init__(**kwargs)
         self.data_format = K.normalize_data_format(data_format)
         self.size = conv_utils.normalize_tuple(size, 2, 'size')
         self.input_spec = InputSpec(ndim=4)
@@ -34,10 +34,10 @@ class BilinearUpSampling2D(Layer):
         elif self.data_format == 'channels_last':
             height = self.size[0] * input_shape[1] if input_shape[1] is not None else None
             width = self.size[1] * input_shape[2] if input_shape[2] is not None else None
-        
+
         return tf.image.resize_images(inputs, [height, width], method=tf.image.ResizeMethod.BILINEAR, align_corners=True)
 
     def get_config(self):
         config = {'size': self.size, 'data_format': self.data_format}
-        base_config = super(BilinearUpSampling2D, self).get_config()
+        base_config = super(UpSampling2D, self).get_config()
         return dict(list(base_config.items()) + list(config.items()))

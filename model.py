@@ -3,11 +3,11 @@ import sys
 from keras import applications
 from keras.models import Model, load_model
 from keras.layers import Input, InputLayer, Conv2D, Activation, LeakyReLU, Concatenate
-from layers import BilinearUpSampling2D
+from layers import UpSampling2D
 from loss import depth_loss_function
 
 def create_model(existing='', is_twohundred=False, is_halffeatures=True):
-        
+
     if len(existing) == 0:
         print('Loading base model (DenseNet)..')
 
@@ -33,7 +33,7 @@ def create_model(existing='', is_twohundred=False, is_halffeatures=True):
 
         # Define upsampling layer
         def upproject(tensor, filters, name, concat_with):
-            up_i = BilinearUpSampling2D((2, 2), name=name+'_upsampling2d')(tensor)
+            up_i = UpSampling2D((2, 2), name=name+'_upsampling2d')(tensor)
             up_i = Concatenate(name=name+'_concat')([up_i, base_model.get_layer(concat_with).output]) # Skip connection
             up_i = Conv2D(filters=filters, kernel_size=3, strides=1, padding='same', name=name+'_convA')(up_i)
             up_i = LeakyReLU(alpha=0.2)(up_i)
@@ -59,10 +59,10 @@ def create_model(existing='', is_twohundred=False, is_halffeatures=True):
         # Load model from file
         if not existing.endswith('.h5'):
             sys.exit('Please provide a correct model file when using [existing] argument.')
-        custom_objects = {'BilinearUpSampling2D': BilinearUpSampling2D, 'depth_loss_function': depth_loss_function}
+        custom_objects = {'UpSampling2D': UpSampling2D, 'depth_loss_function': depth_loss_function}
         model = load_model(existing, custom_objects=custom_objects)
         print('\nExisting model loaded.\n')
 
     print('Model created.')
-    
+
     return model

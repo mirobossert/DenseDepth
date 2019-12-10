@@ -6,7 +6,7 @@ import matplotlib
 # Keras / TensorFlow
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '5'
 from keras.models import load_model
-from layers import BilinearUpSampling2D
+from layers import UpSampling2D
 from utils import predict, load_images, display_images
 from matplotlib import pyplot as plt
 
@@ -17,7 +17,7 @@ parser.add_argument('--input', default='examples/*.png', type=str, help='Input f
 args = parser.parse_args()
 
 # Custom object needed for inference and training
-custom_objects = {'BilinearUpSampling2D': BilinearUpSampling2D, 'depth_loss_function': None}
+custom_objects = {'UpSampling2D': UpSampling2D, 'depth_loss_function': None}
 
 print('Loading model...')
 
@@ -34,7 +34,7 @@ print('\nLoaded ({0}) images of size {1}.'.format(inputs.shape[0], inputs.shape[
 outputs = predict(model, inputs)
 
 #matplotlib problem on ubuntu terminal fix
-#matplotlib.use('TkAgg')   
+#matplotlib.use('TkAgg')
 
 # Display results
 viz = display_images(outputs.copy(), inputs.copy())
